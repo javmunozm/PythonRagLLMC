@@ -1,0 +1,32 @@
+node_modules/
+*.log
+Dist/ # Entornos virtuales
+# Entornos virtuales
+.venv/
+venv/
+env/
+# Bytecode y cachés
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+# Secretos: NUNCA se suben
+
+.env
+.env.*
+!.env.example
+# Notebooks
+.ipynb_checkpoints/
+# Datos generados por RAG (bases vectoriales locales)
+chroma_db/
+*.sqlite3
+# Editor y sistema
+.vscode/*
+!.vscode/settings.json
+.idea/
+.DS_Store
+# Builds
+dist/
+build/
+*.egg-info/
