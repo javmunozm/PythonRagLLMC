@@ -1,6 +1,7 @@
 node_modules/
 *.log
-Dist/ # Entornos virtuales
+Dist/ 
+# Entornos virtuales
 # Entornos virtuales
 .venv/
 venv/
@@ -12,7 +13,6 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 # Secretos: NUNCA se suben
-
 .env
 .env.*
 !.env.example
@@ -23,7 +23,7 @@ chroma_db/
 *.sqlite3
 # Editor y sistema
 .vscode/*
-!.vscode/settings.json
+!.vscode/launch.json
 .idea/
 .DS_Store
 # Builds

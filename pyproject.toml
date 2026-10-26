@@ -1,0 +1,10 @@
+[project]
+name = "asistente-documentos"
+version = "0.2.0"
+requires-python = ">=3.12"
+[tool.ruff]
+line-length = 100
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]

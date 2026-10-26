@@ -1,0 +1,4 @@
+# Lo de requirements.txt + herramientas de desarrollo (no entran en la imagen Docker)
+-r requirements.txt
+pytest==9.1.1
+ruff==0.16.10
