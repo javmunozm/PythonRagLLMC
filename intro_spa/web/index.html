@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Notas</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 32rem; margin: 2rem auto; padding: 0 1rem; }
+    li { display: flex; justify-content: space-between; padding: 0.25rem 0; }
+    #error { color: #b00020; }
+  </style>
+</head>
+<body>
+
+  <h1>Notas</h1>
+  
+  <form id="form">
+    <input id="texto" placeholder="Escribe una nota" maxlength="200" required />
+    <button>Agregar</button>
+  </form>
+  
+  <p id="error"></p>
+  <ul id="lista"></ul>
+
+  <script type="module">
+    const $ = (id) => document.getElementById(id);
+
+    // Un solo punto de salida hacia la API (como un servicio de axios)
+    async function api(path, options = {}) {
+      const res = await fetch(`/api${path}`, {
+        headers: { "Content-Type": "application/json" },
+        ...options,
+      });
+      if (!res.ok) {
+        const { detail } = await res.json();
+        throw new Error(typeof detail === "string" ? detail : `Error ${res.status}`);
+      }
+      return res.status === 204 ? null : res.json();
+    }
+
+    // "Render": vuelve a pintar la lista a partir del estado del servidor
+    async function render() {
+      try {
+        const notas = await api("/notas");
+        const items = notas.map((nota) => {
+          const li = document.createElement("li");
+          li.textContent = nota.texto; // textContent, nunca innerHTML: evita XSS
+          
+          const borrar = document.createElement("button");
+          borrar.textContent = "Borrar";
+          borrar.onclick = () => api(`/notas/${nota.id}`, { method: "DELETE" }).then(render).catch(manejarError);
+          
+          li.append(borrar);
+          return li;
+        });
+        $("lista").replaceChildren(...items);
+      } catch (err) {
+        manejarError(err);
+      }
+    }
+
+    function manejarError(err) {
+      $("error").textContent = err.message;
+    }
+
+    // SPA: el formulario no recarga la página
+    $("form").addEventListener("submit", async (e) => {
+      e.preventDefault(); 
+      try {
+        await api("/notas", { 
+          method: "POST", 
+          body: JSON.stringify({ texto: $("texto").value }) 
+        });
+        $("texto").value = "";
+        $("error").textContent = "";
+        await render();
+      } catch (err) {
+        manejarError(err);
+      }
+    });
+
+    // Carga inicial
+    render();
+  </script>
+
+</body>
+</html>
