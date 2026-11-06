@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     # "openai" sirve para gpt y azure (solo cambia la url);"gemini" para google
     llm_provider: Literal["openai", "gemini"] = "gemini"
+    openai_api_key: SecretStr | None = None
     openai_base_url: str | None = None  # Solo para azure, el str | none es tecnicamente str?
     gemini_api_key: SecretStr | None = None
     llm_model: str = "gemini-3.5-flash"

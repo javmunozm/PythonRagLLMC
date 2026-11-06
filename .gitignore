@@ -30,3 +30,5 @@ chroma_db/
 dist/
 build/
 *.egg-info/
+# book
+Manual_Curso_IA_Python_v2.pdf
