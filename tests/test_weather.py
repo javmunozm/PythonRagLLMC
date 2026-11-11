@@ -42,7 +42,7 @@ def test_clima_acepta_tildes_y_mayusculas():
     def siempre_18(lat, lon):
         return 18.5
 
-    assert weather_report("Chillán", siempre_18) == "18.5 ºC en Chillán"
+    assert weather_report("Chillán", siempre_18) == "18.5 °C en Chillán"
     assert weather_report(" CONCEPCIÓN ", siempre_18).startswith("18.5")
 
 
@@ -60,4 +60,4 @@ def test_clima_con_la_api_caida_devuelve_texto():
 def test_script_de_consola(monkeypatch, capsys):
     monkeypatch.setattr(clima, "current_temperature", lambda lat, lon: 18.5)
     clima.main("Santiago")
-    assert capsys.readouterr().out == "18.5 ºC en Santiago\n"
+    assert capsys.readouterr().out == "18.5 °C en Santiago\n"
