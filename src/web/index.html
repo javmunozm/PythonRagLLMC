@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Asistente de documentos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap" />
+  <style>
+    /* Layout: barra lateral de documentos + columna de chat con el compositor fijo abajo */
+    :root {
+      --bg: #f3f5f8;
+      --surface: #ffffff;
+      --ink: #1a2130;
+      --muted: #5d6677;
+      --line: #dde2ea;
+      --accent: #2c56c9;
+      --accent-ink: #ffffff;
+      --accent-soft: #e7edfb;
+      --ok: #1f7a4d;
+      --warn: #9a5b00;
+      --warn-soft: #fdf2dd;
+      --error: #b3261e;
+      --error-soft: #fbe9e7;
+      --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+      --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+      --font-mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+      --radius: 10px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f131a;
+        --surface: #161b24;
+        --ink: #e5e8ee;
+        --muted: #98a1b0;
+        --line: #273041;
+        --accent: #7f9cff;
+        --accent-ink: #0f131a;
+        --accent-soft: #1c2640;
+        --ok: #5fcf95;
+        --warn: #f0b555;
+        --warn-soft: #2e2413;
+        --error: #ff8a80;
+        --error-soft: #331a19;
+        color-scheme: dark;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 15px/1.55 var(--font-body);
+    }
+    button, textarea, input { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .app {
+      height: 100%;
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    /* Cabecera */
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .logo {
+      width: 32px; height: 32px; flex: none;
+      display: grid; place-items: center;
+      border-radius: 8px;
+      background: var(--accent); color: var(--accent-ink);
+    }
+    header h1 {
+      margin: 0;
+      font: 600 17px/1.2 var(--font-display);
+      letter-spacing: -0.01em;
+    }
+    header p { margin: 0; color: var(--muted); font-size: 13px; }
+    #toggle-docs { display: none; margin-left: auto; }
+
+    /* Barra lateral */
+    aside {
+      border-right: 1px solid var(--line);
+      background: var(--surface);
+      padding: 20px 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .label {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    #subir { display: flex; flex-direction: column; gap: 10px; }
+    .drop {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      padding: 20px 12px;
+      border: 1.5px dashed var(--line);
+      border-radius: var(--radius);
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+    .drop:focus-within { border-color: var(--accent); }
+    .drop svg { color: var(--accent); }
+    .drop strong { font-weight: 600; }
+    .drop small { color: var(--muted); }
+    .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    #elegidos { margin: 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 9px 14px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: var(--accent); color: var(--accent-ink);
+      font-weight: 600; cursor: pointer;
+    }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+
+    .status { margin: 0; font-size: 13px; min-height: 1.4em; }
+    .status.ok { color: var(--ok); }
+    .status.error { color: var(--error); }
+    .status.busy { color: var(--muted); }
+
+    #docs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+    #docs li {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: var(--bg);
+      font-size: 13px;
+    }
+    #docs .ext {
+      flex: none;
+      font: 600 10px/1 var(--font-mono);
+      text-transform: uppercase;
+      padding: 4px 5px;
+      border-radius: 4px;
+      background: var(--accent-soft); color: var(--accent);
+    }
+    #docs .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hint { margin: 0; font-size: 13px; color: var(--muted); }
+
+    /* Chat */
+    main { display: flex; flex-direction: column; min-height: 0; }
+    #hilo {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
+    }
+    .col { max-width: 46rem; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+    .empty { padding-top: 8vh; display: flex; flex-direction: column; gap: 14px; }
+    .empty h2 {
+      margin: 0;
+      font: 600 26px/1.2 var(--font-display);
+      letter-spacing: -0.02em;
+      text-wrap: balance;
+    }
+    .empty p { margin: 0; color: var(--muted); max-width: 34rem; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 14px;
+      text-align: left;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+    .msg { display: flex; flex-direction: column; gap: 8px; animation: rise .2s ease-out; }
+    .msg.user { align-items: flex-end; }
+    .msg.user .text {
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: 14px 14px 4px 14px;
+      background: var(--accent); color: var(--accent-ink);
+    }
+    .msg .text { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .msg.bot .text { padding: 2px 0; }
+    .msg.bot.streaming .text:empty::before {
+      content: "";
+      display: inline-block;
+      width: 36px; height: 10px;
+      background:
+        radial-gradient(circle, var(--muted) 3px, transparent 3.5px) 0 50% / 12px 10px repeat-x;
+      animation: pulse 1s ease-in-out infinite;
+    }
+    .msg.bot.streaming .text:not(:empty)::after {
+      content: "▍";
+      color: var(--accent);
+      animation: pulse 1s steps(2) infinite;
+    }
+
+    .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; }
+    .src {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: var(--accent-soft); color: var(--accent);
+      font-weight: 500;
+    }
+    .usage { color: var(--muted); font: 12px var(--font-mono); font-variant-numeric: tabular-nums; margin-left: auto; }
+    .notice {
+      display: flex; gap: 8px; align-items: flex-start;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13.5px;
+    }
+    .notice.warn { background: var(--warn-soft); color: var(--warn); }
+    .notice.error { background: var(--error-soft); color: var(--error); }
+
+    /* Compositor */
+    .composer {
+      border-top: 1px solid var(--line);
+      background: var(--surface);
+      padding: 12px max(16px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    }
+    #preguntar {
+      max-width: 46rem; margin: 0 auto;
+      display: flex; align-items: flex-end; gap: 8px;
+      padding: 6px 6px 6px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--bg);
+    }
+    #preguntar:focus-within { border-color: var(--accent); }
+    #pregunta {
+      flex: 1; min-width: 0;
+      border: 0; outline: 0; resize: none;
+      background: transparent;
+      padding: 8px 0;
+      max-height: 200px;
+      line-height: 1.5;
+    }
+    #enviar { width: 40px; height: 40px; padding: 0; border-radius: 10px; flex: none; }
+    .foot {
+      max-width: 46rem; margin: 6px auto 0;
+      display: flex; justify-content: space-between; gap: 12px;
+      font-size: 12px; color: var(--muted);
+    }
+    #contador { font-variant-numeric: tabular-nums; }
+    #contador.over { color: var(--error); }
+
+    @keyframes rise { from { opacity: .4; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    @keyframes pulse { 50% { opacity: .3; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+    @media (max-width: 760px) {
+      .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); }
+      #toggle-docs { display: inline-flex; }
+      aside { display: none; border-right: 0; border-bottom: 1px solid var(--line); max-height: 55vh; }
+      .app.docs-open aside { display: flex; }
+      .empty { padding-top: 2vh; }
+      .foot .keys { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header>
+      <div class="logo" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>
+      </div>
+      <div>
+        <h1>Asistente de documentos</h1>
+        <p>Responde con citas a tus PDF y textos</p>
+      </div>
+      <button class="btn ghost" id="toggle-docs" type="button" aria-controls="panel" aria-expanded="false">Documentos</button>
+    </header>
+
+    <aside id="panel" aria-label="Documentos">
+      <form id="subir">
+        <p class="label">Agregar documentos</p>
+        <label class="drop" id="drop">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+          <strong>Elige o arrastra archivos</strong>
+          <small>PDF, TXT o MD · hasta 10 MB cada uno</small>
+          <input id="archivos" type="file" multiple accept=".pdf,.txt,.md" />
+        </label>
+        <p id="elegidos" hidden></p>
+        <button class="btn" id="indexar" disabled>Indexar</button>
+        <p class="status" id="estado" role="status"></p>
+      </form>
+
+      <section>
+        <p class="label">Indexados en esta sesión</p>
+        <ul id="docs"></ul>
+        <p class="hint" id="docs-vacio">Todavía nada. Lo que indexaste antes sigue disponible para las preguntas.</p>
+      </section>
+    </aside>
+
+    <main>
+      <div id="hilo" aria-live="polite">
+        <div class="col" id="col">
+          <div class="empty" id="vacio">
+            <h2>Pregunta lo que necesites saber de tus documentos</h2>
+            <p>Cada respuesta indica de qué archivo sale. Si no encuentra una fuente, te lo avisa.</p>
+            <div class="chips">
+              <button class="chip" type="button" data-q="¿Cuántos días de vacaciones me corresponden?">¿Cuántos días de vacaciones me corresponden?</button>
+              <button class="chip" type="button" data-q="¿Cuántos días a la semana puedo teletrabajar?">¿Cuántos días a la semana puedo teletrabajar?</button>
+              <button class="chip" type="button" data-q="Resume la política de recursos humanos.">Resume la política de recursos humanos</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="composer">
+        <form id="preguntar">
+          <textarea id="pregunta" rows="1" maxlength="2000" placeholder="Escribe tu pregunta…" aria-label="Pregunta"></textarea>
+          <button class="btn" id="enviar" aria-label="Enviar pregunta" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+        </form>
+        <div class="foot">
+          <span class="keys">Enter envía · Shift+Enter nueva línea · cada pregunta es independiente</span>
+          <span id="contador">0 / 2000</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    const $ = (id) => document.getElementById(id);
+    const MIN = 3, MAX = 2000;
+    let busy = false;
+
+    // Crea nodos con textContent: el texto del modelo nunca se interpreta como HTML (sin XSS)
+    function el(tag, cls, text) {
+      const node = document.createElement(tag);
+      if (cls) node.className = cls;
+      if (text != null) node.textContent = text;
+      return node;
+    }
+
+    function errorText(detail, fallback) {
+      if (typeof detail === "string") return detail;
+      if (Array.isArray(detail)) return `La pregunta debe tener entre ${MIN} y ${MAX} caracteres.`;
+      return fallback;
+    }
+
+    /* ---------- Documentos ---------- */
+    $("toggle-docs").addEventListener("click", () => {
+      const open = $("app").classList.toggle("docs-open");
+      $("toggle-docs").setAttribute("aria-expanded", String(open));
+    });
+
+    function showPicked() {
+      const files = [...$("archivos").files];
+      $("elegidos").hidden = !files.length;
+      $("elegidos").textContent = files.map((f) => f.name).join(", ");
+      $("indexar").disabled = !files.length;
+    }
+    $("archivos").addEventListener("change", showPicked);
+
+    const drop = $("drop");
+    drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+    drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+    drop.addEventListener("drop", (e) => {
+      e.preventDefault();
+      drop.classList.remove("over");
+      $("archivos").files = e.dataTransfer.files;
+      showPicked();
+    });
+
+    function setStatus(text, kind) {
+      $("estado").textContent = text;
+      $("estado").className = `status ${kind}`;
+    }
+
+    function addDocs(names) {
+      $("docs-vacio").hidden = true;
+      for (const name of names) {
+        const li = el("li");
+        li.append(el("span", "ext", name.split(".").pop()), el("span", "name", name));
+        li.title = name;
+        $("docs").prepend(li);
+      }
+    }
+
+    $("subir").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const files = [...$("archivos").files];
+      if (!files.length) return;
+      const form = new FormData();
+      for (const file of files) form.append("files", file);
+
+      $("indexar").disabled = true;
+      setStatus(`Indexando ${files.length} archivo${files.length > 1 ? "s" : ""}…`, "busy");
+      try {
+        const res = await fetch("/ingest", { method: "POST", body: form });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) return setStatus(errorText(data.detail, `El servidor respondió ${res.status}.`), "error");
+        addDocs(data.files);
+        setStatus(`Listo: ${data.chunks} fragmentos indexados.`, "ok");
+        $("subir").reset();
+      } catch {
+        setStatus("No se pudo conectar con el servidor. ¿Está corriendo la API?", "error");
+      } finally {
+        showPicked();
+      }
+    });
+
+    /* ---------- Chat ---------- */
+    const hilo = $("hilo");
+    const nearBottom = () => hilo.scrollHeight - hilo.scrollTop - hilo.clientHeight < 80;
+    const toBottom = () => { hilo.scrollTop = hilo.scrollHeight; };
+
+    function addUser(text) {
+      $("vacio").hidden = true;
+      const msg = el("div", "msg user");
+      msg.append(el("div", "text", text));
+      $("col").append(msg);
+      toBottom();
+    }
+
+    function addBot() {
+      const node = el("div", "msg bot streaming");
+      const text = el("div", "text");
+      node.append(text);
+      $("col").append(node);
+      toBottom();
+      return { node, text };
+    }
+
+    function notice(msg, kind, text) {
+      msg.node.append(el("div", `notice ${kind}`, text));
+    }
+
+    function finish(msg, ev) {
+      const meta = el("div", "meta");
+      for (const source of ev.sources) meta.append(el("span", "src", source));
+      const u = ev.usage;
+      meta.append(el("span", "usage", `${u.input_tokens + u.output_tokens} tokens · US$ ${Number(u.cost_usd).toFixed(5)}`));
+      msg.node.append(meta);
+      if (!ev.grounded) notice(msg, "warn", "Esta respuesta no cita ningún documento: verifícala antes de usarla.");
+    }
+
+    function show(msg, ev) {
+      const stick = nearBottom();
+      if (ev.type === "token") msg.text.textContent += ev.text;
+      if (ev.type === "error") notice(msg, "error", ev.detail);
+      if (ev.type === "done") finish(msg, ev);
+      if (stick) toBottom();
+    }
+
+    async function ask(question) {
+      busy = true;
+      updateComposer();
+      addUser(question);
+      const msg = addBot();
+      try {
+        const res = await fetch("/ask/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          return notice(msg, "error", errorText(data.detail, `El servidor respondió ${res.status}.`));
+        }
+        // El cuerpo llega como NDJSON: cada línea es un evento JSON
+        const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+        let buffer = "";
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += value;
+          const lines = buffer.split("\n");
+          buffer = lines.pop(); // la última línea puede venir cortada: espera al siguiente trozo
+          for (const line of lines.filter(Boolean)) show(msg, JSON.parse(line));
+        }
+      } catch {
+        notice(msg, "error", "Se cortó la conexión con el servidor.");
+      } finally {
+        msg.node.classList.remove("streaming");
+        if (!msg.text.textContent) msg.text.remove();
+        busy = false;
+        updateComposer();
+        $("pregunta").focus();
+      }
+    }
+
+    /* ---------- Compositor ---------- */
+    const box = $("pregunta");
+
+    function updateComposer() {
+      const n = box.value.trim().length;
+      $("contador").textContent = `${box.value.length} / ${MAX}`;
+      $("contador").classList.toggle("over", box.value.length >= MAX);
+      $("enviar").disabled = busy || n < MIN;
+    }
+
+    function autosize() {
+      box.style.height = "auto";
+      box.style.height = `${Math.min(box.scrollHeight, 200)}px`;
+    }
+
+    box.addEventListener("input", () => { autosize(); updateComposer(); });
+    box.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+        e.preventDefault();
+        $("preguntar").requestSubmit();
+      }
+    });
+
+    $("preguntar").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const question = box.value.trim();
+      if (busy || question.length < MIN) return;
+      box.value = "";
+      autosize();
+      ask(question);
+    });
+
+    for (const chip of document.querySelectorAll(".chip")) {
+      chip.addEventListener("click", () => { if (!busy) ask(chip.dataset.q); });
+    }
+
+    updateComposer();
+    box.focus();
+  </script>
+</body>
+</html>

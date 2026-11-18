@@ -3,6 +3,7 @@ entrada y de salida."""
 
 from dataclasses import dataclass
 
+
 @dataclass(frozen=True)
 class Usage:
     """Lo que gasto un caso de uso: suma todas sus llamadas al LLM."""

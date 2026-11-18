@@ -12,6 +12,7 @@ from src.domain.answers import data_block
 from src.domain.documents import ChunkRepository
 from src.services.ask import RAG_PROMPT
 
+
 class State(TypedDict, total=False): # total = False: las claves se van lleando
     question: str
     route: Literal["documentos", "general"]

@@ -7,8 +7,10 @@ from langchain.agents import create_agent
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
+
 from src.domain.costs import Prices, Usage
 from src.services.usage import UsageMeter
+
 SYSTEM_PROMPT = (
 "Eres un asistente interno. Usa tus herramientas cuando la pregunta lo necesite: la búsqueda "
 "para lo que trate de los documentos internos y el clima para la temperatura de una ciudad. "

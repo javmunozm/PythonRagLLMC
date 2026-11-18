@@ -8,11 +8,11 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
 from src.domain.answers import (
-    NO_ANSWER, 
-    Answer, 
-    cited_sources, 
+    NO_ANSWER,
+    Answer,
+    cited_sources,
     data_block,
-    )
+)
 from src.domain.costs import Prices
 from src.domain.documents import ChunkRepository
 from src.services.usage import UsageMeter
